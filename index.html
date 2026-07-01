@@ -49,7 +49,7 @@
 <body>
 <header>
   <h1>Predicting individual two-party presidential vote from demographics and place</h1>
-  <p>CCES Cumulative 2006-2024, individual respondents. Self-reported party and ideology are excluded on purpose &mdash; the model predicts vote from non-political traits plus the state's historical lean. Test accuracy 74.5% (2020-2024 holdout), vs 56% for geography alone.</p>
+  <p>CCES Cumulative 2006-2024, individual respondents, mapped by congressional district (118th Congress). Self-reported party and ideology are excluded on purpose &mdash; the model predicts vote from non-political traits plus the district's historical lean. Test accuracy 74.7% (2020-2024 holdout), vs 60% for geography alone.</p>
 </header>
 <div class="wrap">
   <aside>
@@ -57,8 +57,8 @@
       <button id="mPop" class="on">Actual respondents</button>
       <button id="mPer">Custom persona</button>
     </div>
-    <div id="popHint" class="hint">Model-predicted Democratic share of the two-party vote, averaged over each state's real 2024 respondents. This is the map validating against reality.</div>
-    <div id="perHint" class="hint" style="display:none">One hypothetical individual, shown across every state. Differences between states come only from each state's political lean. Move the controls to see how the same person's predicted vote shifts by place.</div>
+    <div id="popHint" class="hint">Model-predicted Democratic share of the two-party vote, averaged over each congressional district's real 2024 respondents (~140 per district). This is the map validating against reality.</div>
+    <div id="perHint" class="hint" style="display:none">One hypothetical individual, shown across all 436 districts. Differences between districts come only from each district's political lean. Move the controls to see how the same person's predicted vote shifts by place.</div>
     <div id="personaCtl" class="dim"></div>
   </aside>
   <main>
@@ -66,8 +66,8 @@
     <div id="tip"></div>
     <div class="readout">
       <div><span>Mode</span> <span id="roMode" class="num">Actual respondents</span></div>
-      <div><span>Predicted Democratic states</span> <span id="roDem" class="num">-</span></div>
-      <div><span>Predicted Republican states</span> <span id="roRep" class="num">-</span></div>
+      <div><span>Predicted Democratic districts</span> <span id="roDem" class="num">-</span></div>
+      <div><span>Predicted Republican districts</span> <span id="roRep" class="num">-</span></div>
       <div><span>Mean P(Dem)</span> <span id="roMean" class="num">-</span></div>
     </div>
     <div class="legend">
@@ -76,7 +76,7 @@
       <span style="color:var(--dem)">Democratic</span>
       <span style="margin-left:auto">Color = P(Democratic two-party vote), 0 &rarr; 1</span>
     </div>
-    <footer>Logistic model, coefficients run live in your browser. Place signal = state historical Democratic lean (train-only, leakage-safe). Aggregate context attached to individuals carries ecological-inference risk; treat state-to-state persona differences as lean effects, not proof about any real person.</footer>
+    <footer>Logistic model, coefficients run live in your browser. Place signal = district historical Democratic lean (train-only, leakage-safe; districts created by 2022 redistricting fall back to state lean). Aggregate context attached to individuals carries ecological-inference risk; treat district-to-district persona differences as lean effects, not proof about any real person.</footer>
   </main>
 </div>
 
@@ -124,40 +124,67 @@ M.onehot.forEach(c=>{
 })();
 
 // ---- prediction (mirrors train_export.py exactly) ----
-function predictPersona(stateName){
+const ABBR={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",
+  CT:"Connecticut",DE:"Delaware",DC:"District of Columbia",FL:"Florida",GA:"Georgia",HI:"Hawaii",
+  ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",
+  ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",
+  MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",
+  NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",
+  OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",
+  TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",
+  WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"};
+function leanOf(cd){
+  if(cd in M.dist_lean) return M.dist_lean[cd];                 // train-era district
+  const st = ABBR[cd.slice(0,2)];                                // new 2022+ district ->
+  return (st && st in M.state_lean) ? M.state_lean[st] : M.national_dem;  // state fallback
+}
+function predictPersona(cd){
   let z = M.intercept;
   for(const c of M.onehot){ const k=c+"="+persona[c]; if(k in M.coef) z+=M.coef[k]; }
   for(const c of M.numeric){ z += M.coef[c]*((persona[c]-M.num_mean[c])/M.num_std[c]); }
-  const lean = (stateName in M.state_lean)?M.state_lean[stateName]:M.national_dem;
-  z += M.coef["state_lean"]*((lean-M.place_mean)/M.place_std);
+  z += M.coef["dist_lean"]*((leanOf(cd)-M.place_mean)/M.place_std);
   return 1/(1+Math.exp(-z));
 }
-function value(stateName){
-  return mode==="pop" ? (M.state_pred[stateName] ?? null) : predictPersona(stateName);
+function value(cd){
+  return mode==="pop" ? (M.dist_pred[cd] ?? null) : predictPersona(cd);
 }
 
 const color = d3.scaleLinear().domain([0,.5,1])
   .range(["#b2182b","#f7f7f7","#2166ac"]).clamp(true);
 
-// ---- draw map ----
+// ---- draw map: district fills + state boundary overlay ----
 let paths=null;
-d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(us=>{
-  const states = topojson.feature(us, us.objects.states).features;
-  const path = d3.geoPath(d3.geoAlbersUsa().fitSize([960,600], {type:"FeatureCollection",features:states}));
-  paths = svg.selectAll("path").data(states).join("path")
-    .attr("class","state").attr("d",path)
+Promise.all([
+  d3.json("districts.json"),
+  d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json")
+]).then(([cds, us])=>{
+  const proj = d3.geoAlbersUsa().fitSize([960,600], cds);
+  const path = d3.geoPath(proj);
+  paths = svg.append("g").selectAll("path").data(cds.features).join("path")
+    .attr("class","state").attr("d",path).style("stroke-width",".35px")
     .on("mousemove",function(ev,d){
-      const nm=d.properties.name, v=value(nm);
+      const cd=d.properties.cd, v=value(cd);
       if(v==null){tip.style("opacity",0);return;}
       const dem=(v*100).toFixed(0), rep=(100-v*100).toFixed(0);
       const win=v>=.5?`<span style="color:#67a9cf">Democratic +${(dem-rep)}</span>`:`<span style="color:#ef8a62">Republican +${(rep-dem)}</span>`;
-      const extra = mode==="pop" && M.state_n[nm] ? `<div style="color:var(--mut);margin-top:4px">${M.state_n[nm]} respondents</div>` : "";
-      tip.html(`<b>${nm}</b> &nbsp; ${win}<div class="bar"></div>
-        <div style="margin-top:5px">D ${dem}% &nbsp;|&nbsp; R ${rep}%</div>${extra}`)
+      const nm = (ABBR[cd.slice(0,2)]||cd.slice(0,2)) + " district " + (+cd.slice(3));
+      const bits=[];
+      if(mode==="pop" && M.dist_n[cd]) bits.push(`${M.dist_n[cd]} respondents`);
+      if(!(cd in M.dist_lean)) bits.push("new 2022 district: state-lean fallback");
+      const extra = bits.length?`<div style="color:var(--mut);margin-top:4px">${bits.join(" &middot; ")}</div>`:"";
+      tip.html(`<b>${cd}</b> &nbsp; ${win}<div class="bar"></div>
+        <div style="margin-top:5px">${nm}</div>
+        <div style="margin-top:3px">D ${dem}% &nbsp;|&nbsp; R ${rep}%</div>${extra}`)
         .style("opacity",1)
         .style("left",(ev.offsetX+16)+"px").style("top",(ev.offsetY+12)+"px");
     })
     .on("mouseleave",()=>tip.style("opacity",0));
+  // state boundaries on top, non-interactive
+  svg.append("path")
+    .datum(topojson.mesh(us, us.objects.states, (a,b)=>a!==b))
+    .attr("d", path)
+    .attr("fill","none").attr("stroke","#0e1116").attr("stroke-width","1.1px")
+    .style("pointer-events","none");
   render();
 });
 
@@ -165,7 +192,7 @@ function render(){
   if(!paths) return;
   let dem=0,rep=0,sum=0,cnt=0;
   paths.attr("fill",d=>{
-    const v=value(d.properties.name);
+    const v=value(d.properties.cd);
     if(v==null) return "#30363d";
     if(v>=.5)dem++;else rep++; sum+=v; cnt++;
     return color(v);
