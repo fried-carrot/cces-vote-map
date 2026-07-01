@@ -6,3 +6,6 @@ cd118_shp/
 .venv/
 __pycache__/
 .DS_Store
+
+# intermediate geojson (districts.js is the deployed artifact)
+districts.json
