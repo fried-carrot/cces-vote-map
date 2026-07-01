@@ -1,0 +1,6 @@
+# data (675MB Stata source + derived xlsx) - too large for git, keep local
+cumulative_2006-2024.dta
+cumulative_2006-2024.xlsx
+.venv/
+__pycache__/
+.DS_Store
