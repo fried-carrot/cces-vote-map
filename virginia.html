@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Virginia Field Ops - Canvassing Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --line:#2a313c; --ink:#e6edf3; --mut:#8b949e;
+    --dem:#2166ac; --rep:#b2182b; --accent:#eda100; --accent2:#ffc24d;
+    --w1:#3987e5; --w2:#199e70; --w3:#d95926; --w4:#9085e9; --w5:#008300; --w6:#d55181;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font:14px/1.45 Barlow,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);overflow:hidden}
+  header{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px}
+  header h1{margin:0;font:600 22px/1 "Barlow Condensed",sans-serif;letter-spacing:.02em;text-transform:uppercase}
+  header h1 b{color:var(--accent);font-weight:700}
+  header p{margin:0;color:var(--mut);font-size:12px;flex:1}
+  header a{color:var(--mut);font-size:12px;text-decoration:none;border:1px solid var(--line);
+    border-radius:6px;padding:4px 10px;white-space:nowrap}
+  header a:hover{color:var(--ink);border-color:var(--mut)}
+  .wrap{display:flex;height:calc(100vh - 49px)}
+  aside{width:322px;flex:0 0 322px;border-right:1px solid var(--line);padding:14px 16px 30px;
+        overflow-y:auto;background:var(--panel)}
+  main{flex:1;position:relative}
+  #deck-container{position:absolute;inset:0}
+  h2{font:600 12px/1 "Barlow Condensed",sans-serif;letter-spacing:.14em;text-transform:uppercase;
+     color:var(--mut);margin:20px 0 10px;border-top:1px solid var(--line);padding-top:14px}
+  h2:first-of-type{border-top:none;margin-top:2px;padding-top:0}
+  /* platform gauge */
+  #gaugeBox{text-align:center}
+  #gauge{width:100%;max-width:250px}
+  .gaugeNum{font:700 34px/1 "Barlow Condensed",sans-serif;fill:var(--ink)}
+  .gaugeCap{font:600 10px/1 Barlow,sans-serif;fill:#8b949e;letter-spacing:.1em;text-transform:uppercase}
+  input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0 0}
+  .rowlab{display:flex;justify-content:space-between;color:var(--mut);font-size:11px;margin-top:2px}
+  #strategy{margin-top:10px;font-size:12.5px;color:var(--ink);background:#1b2027;border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:6px;padding:8px 10px;text-align:left}
+  /* controls */
+  .fld{margin-bottom:12px}
+  .fld label{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+  .rngval{float:right;color:var(--accent2);font-variant-numeric:tabular-nums;font-weight:600}
+  .modes{display:flex;gap:6px}
+  .modes button{flex:1;padding:7px 4px;border:1px solid var(--line);background:var(--bg);color:var(--ink);
+    border-radius:7px;cursor:pointer;font:500 12px Barlow,sans-serif}
+  .modes button.on{border-color:var(--accent);background:#241c0b;color:var(--accent2)}
+  .btn{width:100%;padding:9px;border:none;border-radius:7px;cursor:pointer;
+    font:600 13px/1 "Barlow Condensed",sans-serif;letter-spacing:.1em;text-transform:uppercase}
+  #optBtn{background:var(--accent);color:#151002}
+  #optBtn:hover{background:var(--accent2)}
+  #clrBtn{background:none;border:1px solid var(--line);color:var(--mut);margin-top:6px}
+  #clrBtn:hover{color:var(--ink)}
+  .depot{font-size:12px;color:var(--mut);margin:8px 0 10px}
+  .depot b{color:var(--ink);font-weight:500}
+  /* route stats */
+  .route{margin-bottom:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--line);border-radius:7px}
+  .route .top{display:flex;align-items:center;gap:8px;font-size:12.5px}
+  .chip{width:14px;height:14px;border-radius:4px;flex:0 0 14px;text-align:center;
+    font:700 10px/14px Barlow,sans-serif;color:#0e1116}
+  .route .mi{margin-left:auto;color:var(--mut);font-variant-numeric:tabular-nums;font-size:11.5px}
+  .route .bar{height:6px;border-radius:3px;background:#242b35;margin-top:7px;overflow:hidden}
+  .route .bar i{display:block;height:100%;border-radius:3px}
+  .route .nums{display:flex;justify-content:space-between;color:var(--mut);font-size:11px;margin-top:5px;
+    font-variant-numeric:tabular-nums}
+  .route .nums b{color:var(--ink);font-weight:600}
+  #totals,.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+  .tile{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px}
+  .tile .v{font:700 22px/1.1 "Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+  .tile .k{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+  /* canvass feedback */
+  #fbForm{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;margin-top:8px}
+  #fbForm .t{font-size:12px;margin-bottom:6px}
+  #fbForm .t b{color:var(--accent2);font-weight:600}
+  .fbrow{display:flex;gap:8px;margin-bottom:8px}
+  .fbrow label{flex:1;color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+  .fbrow input{width:100%;margin-top:3px;background:var(--panel);border:1px solid var(--line);
+    color:var(--ink);border-radius:5px;padding:5px 7px;font:600 13px Barlow,sans-serif}
+  .btnrow{display:flex;gap:6px;margin-top:8px}
+  .btnrow .btn{padding:7px 4px;font-size:11px}
+  .btn.ghost{background:none;border:1px solid var(--line);color:var(--mut)}
+  .btn.ghost:hover{color:var(--ink)}
+  .btn.ghost.on{border-color:var(--accent);color:var(--accent2);background:#241c0b}
+  #fbStats{margin-top:10px}
+  /* map overlays */
+  #legend{position:absolute;left:14px;bottom:14px;background:rgba(14,17,22,.92);border:1px solid var(--line);
+    border-radius:8px;padding:10px 12px;font-size:11px;color:var(--mut);z-index:3;max-width:260px}
+  #legend .grad{height:10px;width:220px;border-radius:5px;margin:6px 0 3px}
+  #legend .gl{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+  #hint{position:absolute;right:14px;top:12px;background:rgba(14,17,22,.85);border:1px solid var(--line);
+    border-radius:8px;padding:7px 11px;font-size:11.5px;color:var(--mut);z-index:3}
+  .note{color:var(--mut);font-size:11.5px;margin:8px 0 0}
+  footer{position:absolute;right:14px;bottom:14px;z-index:3;max-width:430px;text-align:right;
+    color:#5b6570;font-size:10.5px;line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+  <h1>Virginia <b>Field Ops</b></h1>
+  <p>Tract-level Republican ad/canvass responsivity from real ACS 2023 demographics scored through the CCES model, with graph-optimized door-knocking routes.</p>
+  <a href="index.html">&larr; national vote map</a>
+</header>
+<div class="wrap">
+  <aside>
+    <h2>Platform conservatism index</h2>
+    <div id="gaugeBox">
+      <svg id="gauge" viewBox="0 0 250 148"></svg>
+      <input id="cIdx" type="range" min="0" max="100" value="60">
+      <div class="rowlab"><span>Moderate</span><span>Center-right</span><span>Hard conservative</span></div>
+      <div id="strategy"></div>
+    </div>
+
+    <h2>Map layer</h2>
+    <div class="modes">
+      <button id="mResp" class="on">Responsivity</button>
+      <button id="mLean">Partisan lean</button>
+    </div>
+    <div class="note">Hover any tract for expected receptive doors (responsivity &times; households).</div>
+
+    <h2>Door-knocking routes</h2>
+    <div class="fld">
+      <label>Walkers <span class="rngval" id="wkV">3</span></label>
+      <input id="wk" type="range" min="1" max="6" value="3">
+    </div>
+    <div class="fld">
+      <label>Distance budget per walker <span class="rngval" id="buV">12 mi</span></label>
+      <input id="bu" type="range" min="3" max="40" value="12">
+    </div>
+    <div class="depot">HQ: <b id="depotName">auto (highest-yield tract)</b><br>Click any tract on the map to set HQ.</div>
+    <button id="optBtn" class="btn">Optimize routes</button>
+    <button id="clrBtn" class="btn">Clear routes</button>
+
+    <div id="routeStats"></div>
+    <div id="totals"></div>
+
+    <h2>Canvass feedback &mdash; the learning loop</h2>
+    <div class="note">Log real door results and every tract score updates (beta-binomial
+      posterior over the model prior). The calibrated state lives here, compounds with every
+      shift, and is what the raw public data can never contain.</div>
+    <button id="logBtn" class="btn ghost" style="margin-top:8px">Log mode: off &mdash; click tracts to log doors</button>
+    <div id="fbForm" style="display:none">
+      <div class="t" id="fbName"></div>
+      <div class="fbrow">
+        <label>Doors knocked<input id="fbN" type="number" min="1" max="5000" value="40"></label>
+        <label>Receptive<input id="fbK" type="number" min="0" max="5000" value="15"></label>
+      </div>
+      <button id="fbSave" class="btn" style="background:var(--accent);color:#151002">Save result</button>
+    </div>
+    <div class="btnrow">
+      <button id="simBtn" class="btn ghost">Simulate day</button>
+      <button id="expBtn" class="btn ghost">Export</button>
+      <button id="impBtn" class="btn ghost">Import</button>
+      <button id="rstBtn" class="btn ghost">Reset</button>
+    </div>
+    <input id="impFile" type="file" accept=".json" style="display:none">
+    <div id="fbStats"></div>
+
+    <h2>Method</h2>
+    <div class="note">
+      Responsivity = P(Republican-receptive household) &times; ideological match between the
+      platform index and the tract (Gaussian kernel, &sigma;=25). P(R) is the CCES logistic model
+      post-stratified over race &times; education &times; age &times; income &times; sex cells built
+      from ACS tables B01001/B03002/B15003/B19001 + 7 more, per tract.
+      Routes: Dijkstra shortest paths on the tract-adjacency graph, greedy marginal
+      yield-per-mile insertion (team orienteering), then 2-opt improvement.
+      Moving the platform slider re-scores every tract and re-optimizes live routes.
+    </div>
+  </aside>
+  <main>
+    <div id="deck-container"></div>
+    <div id="hint">drag = pan &middot; scroll = zoom &middot; click = set HQ</div>
+    <div id="legend"></div>
+    <footer>Demo, not a turnkey targeting product. Tract scores are ecological estimates from
+      public aggregate data (ACS 2023 5-yr) and a survey-trained model; they say nothing about
+      any individual household. The platform-response kernel is a stylized spatial-voting
+      assumption, not measured ad response. Sources: Census Bureau ACS/TIGER, CCES 2006-2024.</footer>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/deck.gl@9.0.36/dist.min.js"></script>
+<script src="model_export.js"></script>
+<script src="va_data.js"></script>
+<script src="districts.js"></script>
+<script>
+const VA = window.VA, T = VA.tracts, N = T.length;
+const WCOL = ["#3987e5","#199e70","#d95926","#9085e9","#008300","#d55181"];
+const SIGMA = 25;
+
+// ---- state ----
+let cIdx = 60;                // platform conservatism index 0-100
+let mode = "resp";            // resp | lean
+let depot = null;             // tract index or null = auto
+let routes = null;            // [{walker, stops, pathCoords, miles, doors, receptive}]
+let hasRoutes = false;
+
+// ---- scoring ----
+// prior = CCES-model responsivity at the current platform index;
+// posterior blends in any door results logged for the tract (beta-binomial, N0 pseudo-doors)
+const prior = new Float64Array(N), resp = new Float64Array(N), yld = new Float64Array(N);
+const N0 = 30;
+let obs = {};                 // tract id -> {n: doors knocked, k: receptive}
+try{ obs = JSON.parse(localStorage.getItem("va_canvass_v1")||"{}"); }catch(e){ obs={}; }
+let obsVer = 0;
+function rescore(){
+  for(let i=0;i<N;i++){
+    const pR = T[i].pR, tc = 100*pR, d = (cIdx-tc)/SIGMA;
+    prior[i] = pR*Math.exp(-0.5*d*d);
+    const o = obs[T[i].id];
+    resp[i] = o ? (o.k + prior[i]*N0)/(o.n + N0) : prior[i];
+    yld[i]  = resp[i]*T[i].hh;
+  }
+}
+rescore();
+
+// ---- adjacency graph ----
+const adj = Array.from({length:N},()=>[]);
+for(const [a,b,d] of VA.adj){ adj[a].push([b,d]); adj[b].push([a,d]); }
+
+// binary-heap Dijkstra; returns {dist, prev}
+function dijkstra(src, maxD=Infinity){
+  const dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1);
+  dist[src]=0;
+  const hN=[src], hD=[0];             // simple binary heap
+  const up=i=>{while(i>0){const p=(i-1)>>1;if(hD[p]<=hD[i])break;
+    [hD[p],hD[i]]=[hD[i],hD[p]];[hN[p],hN[i]]=[hN[i],hN[p]];i=p;}};
+  const dn=i=>{for(;;){let s=i,l=2*i+1,r=l+1;if(l<hD.length&&hD[l]<hD[s])s=l;
+    if(r<hD.length&&hD[r]<hD[s])s=r;if(s===i)break;
+    [hD[s],hD[i]]=[hD[i],hD[s]];[hN[s],hN[i]]=[hN[i],hN[s]];i=s;}};
+  while(hN.length){
+    const u=hN[0], du=hD[0];
+    hN[0]=hN[hN.length-1];hD[0]=hD[hD.length-1];hN.pop();hD.pop();dn(0);
+    if(du>dist[u]||du>maxD) continue;
+    for(const [v,w] of adj[u]){
+      const nd=du+w;
+      if(nd<dist[v]){dist[v]=nd;prev[v]=u;hN.push(v);hD.push(nd);up(hN.length-1);}
+    }
+  }
+  return {dist, prev};
+}
+function pathNodes(prev, dst){ const p=[]; for(let u=dst;u!==-1;u=prev[u]) p.push(u); return p.reverse(); }
+
+// ---- team orienteering: round-robin greedy + 2-opt ----
+const INTRA = 0.35;   // miles walked inside a claimed tract
+function optimize(){
+  rescore();
+  const K = +document.getElementById("wk").value;
+  const B = +document.getElementById("bu").value;
+  const hq = depot ?? yld.reduce((b,_,i)=>yld[i]>yld[b]?i:b,0);
+  const claimed = new Uint8Array(N); claimed[hq]=1;
+  const walkers = Array.from({length:K},()=>({at:hq, left:B, stops:[hq], done:false}));
+
+  // greedy: each turn, the walker picks the unclaimed tract with best yield/mile
+  for(let guard=0; guard<N; guard++){
+    let acted=false;
+    for(const w of walkers){
+      if(w.done) continue;
+      const {dist,prev} = dijkstra(w.at, w.left);
+      let best=-1, bestScore=0;
+      for(let i=0;i<N;i++){
+        if(claimed[i]||dist[i]===Infinity||dist[i]+INTRA>w.left||yld[i]<1) continue;
+        const s = yld[i]/(dist[i]+INTRA);
+        if(s>bestScore){bestScore=s;best=i;}
+      }
+      if(best<0){w.done=true;continue;}
+      claimed[best]=1;
+      w.left -= dist[best]+INTRA;
+      w.at = best;
+      w.stops.push(best);
+      w._prevCache = null;
+      acted=true;
+    }
+    if(!acted) break;
+  }
+
+  // 2-opt per walker on stop order (graph distances), then rebuild geometry
+  routes = walkers.map((w,k)=>{
+    let stops = w.stops;
+    if(stops.length>3){
+      const dmap = new Map();
+      for(const s of new Set(stops)) dmap.set(s, dijkstra(s).dist);
+      const D=(a,b)=>dmap.get(a)[b];
+      let improved=true, pass=0;
+      while(improved && pass++<60){
+        improved=false;
+        for(let i=1;i<stops.length-1;i++)
+          for(let j=i+1;j<stops.length;j++){
+            const a=stops[i-1],b=stops[i],c=stops[j],d=stops[j+1];
+            const delta=(D(a,c)+(d!==undefined?D(b,d):0))-(D(a,b)+(d!==undefined?D(c,d):0));
+            if(delta<-1e-6){
+              stops=stops.slice(0,i).concat(stops.slice(i,j+1).reverse(),stops.slice(j+1));
+              improved=true;
+            }
+          }
+      }
+    }
+    // expand stop sequence into full graph path
+    const coords=[T[stops[0]].c];
+    let miles=0;
+    for(let s=1;s<stops.length;s++){
+      const {dist,prev}=dijkstra(stops[s-1]);
+      miles+=dist[stops[s]]+INTRA;
+      for(const n of pathNodes(prev,stops[s]).slice(1)) coords.push(T[n].c);
+    }
+    const visit=stops.slice(1);
+    return {walker:k, stops:visit,
+      pathCoords:coords, miles,
+      doors:visit.reduce((s,i)=>s+T[i].hh,0),
+      receptive:visit.reduce((s,i)=>s+yld[i],0)};
+  }).filter(r=>r.stops.length);
+  hasRoutes = routes.length>0;
+  renderRouteStats(hq);
+  draw();
+}
+
+// ---- colors ----
+function lerp(a,b,t){return a+(b-a)*t}
+function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function ramp(stops,t){
+  t=Math.max(0,Math.min(1,t))*(stops.length-1);
+  const i=Math.min(stops.length-2,Math.floor(t)), f=t-i, A=hex(stops[i]), B=hex(stops[i+1]);
+  return [lerp(A[0],B[0],f)|0, lerp(A[1],B[1],f)|0, lerp(A[2],B[2],f)|0];
+}
+const AMBER=["#1a1408","#4a3409","#8a5c0c","#c98500","#eda100","#ffc24d"];   // sequential: receptive doors
+const DIVERGE=["#2166ac","#67a9cf","#383835","#ef8a62","#b2182b"];           // lean, gray midpoint
+function fillOf(i){
+  if(mode==="lean") return ramp(DIVERGE, T[i].pR);          // 0=blue(D) .. 1=red(R)
+  return ramp(AMBER, resp[i]/0.8);
+}
+
+// ---- deck.gl ----
+const geojson = {type:"FeatureCollection", features:T.map((t,i)=>({
+  type:"Feature", properties:{i}, geometry:t.poly}))};
+const vaDistricts = window.DISTRICTS ? {type:"FeatureCollection",
+  features:window.DISTRICTS.features.filter(f=>f.properties.cd.startsWith("VA-"))} : null;
+
+const dk = new deck.DeckGL({
+  container:"deck-container",
+  views:new deck.MapView({controller:{inertia:true, dragRotate:false, touchRotate:false}}),
+  initialViewState:{longitude:-78.9, latitude:37.85, zoom:6.9, pitch:0, bearing:0,
+    maxPitch:0, minZoom:5.5},
+  getTooltip: info=>{
+    if(!info.object||info.object.properties?.i===undefined) return null;
+    const t=T[info.object.properties.i], i=info.object.properties.i;
+    const lean = t.pR>=.5 ? `R +${Math.round(200*t.pR-100)}` : `D +${Math.round(100-200*t.pR)}`;
+    const o = obs[t.id];
+    const fb = o ? `<br><span style="color:#199e70">canvassed: ${o.k}/${o.n} receptive
+      (prior ${(100*prior[i]).toFixed(0)} &rarr; posterior ${(100*resp[i]).toFixed(0)})</span>` : "";
+    return {html:`<b>${t.name}</b> &middot; ${t.county} &middot; ${t.cd}<br>
+      <span style="color:#ffc24d">responsivity ${(100*resp[i]).toFixed(0)} &middot;
+      ${Math.round(yld[i]).toLocaleString()} receptive doors</span>${fb}<br>
+      model lean ${lean} &middot; ${t.hh.toLocaleString()} households<br>
+      med income ${t.mi?"$"+t.mi.toLocaleString():"n/a"} &middot; BA+ ${(100*t.ba).toFixed(0)}%
+      &middot; white NH ${(100*t.wh).toFixed(0)}% &middot; ${t.dens.toLocaleString()}/sq mi`,
+      style:{background:"#0b0e13",border:"1px solid #2a313c",borderRadius:"8px",
+        color:"#e6edf3",fontSize:"12px",fontFamily:"Barlow,sans-serif",padding:"9px 11px",maxWidth:"280px"}};
+  },
+  onClick: info=>{
+    if(!info.object||info.object.properties?.i===undefined) return;
+    const i=info.object.properties.i;
+    if(logMode){
+      fbSel=i;
+      const o=obs[T[i].id];
+      document.getElementById("fbName").innerHTML=`<b>${T[i].name}</b>, ${T[i].county}`+
+        (o?` &middot; logged ${o.k}/${o.n}`:"");
+      document.getElementById("fbForm").style.display="block";
+    } else {
+      depot=i;
+      document.getElementById("depotName").textContent=`${T[depot].name}, ${T[depot].county}`;
+      if(hasRoutes) optimize();
+    }
+  },
+  layers:[]
+});
+
+function draw(){
+  const layers=[
+    new deck.GeoJsonLayer({
+      id:"tracts", data:geojson, pickable:true,
+      getFillColor:f=>fillOf(f.properties.i),
+      getLineColor:[14,17,22,200], getLineWidth:14, lineWidthMinPixels:.25, lineWidthMaxPixels:1,
+      updateTriggers:{getFillColor:[cIdx,mode,obsVer]},
+      transitions:{getFillColor:250}
+    }),
+    Object.keys(obs).length && new deck.GeoJsonLayer({
+      id:"logged", data:{type:"FeatureCollection",
+        features:geojson.features.filter(f=>obs[T[f.properties.i].id])},
+      filled:false, stroked:true, getLineColor:[25,158,112,230],
+      getLineWidth:2, lineWidthUnits:"pixels",
+      updateTriggers:{getLineColor:[obsVer]}
+    }),
+    vaDistricts && new deck.GeoJsonLayer({
+      id:"cds", data:vaDistricts, filled:false, stroked:true,
+      getLineColor:[230,237,243,90], getLineWidth:2, lineWidthUnits:"pixels"
+    }),
+  ];
+  if(hasRoutes){
+    layers.push(new deck.PathLayer({
+      id:"route-casing", data:routes, getPath:d=>d.pathCoords,
+      getColor:[10,12,16,235], getWidth:9, widthUnits:"pixels",
+      capRounded:true, jointRounded:true
+    }));
+    layers.push(new deck.PathLayer({
+      id:"routes", data:routes, getPath:d=>d.pathCoords,
+      getColor:d=>[...hex(WCOL[d.walker]),255], getWidth:4.5, widthUnits:"pixels",
+      capRounded:true, jointRounded:true
+    }));
+    const hq = routes[0].pathCoords[0];
+    layers.push(new deck.ScatterplotLayer({id:"hq", data:[{p:hq}], getPosition:d=>d.p,
+      getFillColor:[255,255,255,255], getLineColor:[10,12,16,255], lineWidthMinPixels:2,
+      stroked:true, getRadius:9, radiusUnits:"pixels"}));
+    layers.push(new deck.TextLayer({
+      id:"route-ends", data:routes,
+      getPosition:d=>d.pathCoords[d.pathCoords.length-1],
+      getText:d=>String(d.walker+1),
+      getColor:[230,237,243,255], getSize:15, fontFamily:"Barlow, sans-serif", fontWeight:700,
+      background:true, getBackgroundColor:d=>[...hex(WCOL[d.walker]),255],
+      backgroundPadding:[5,2,5,2], getBorderColor:[10,12,16,255], getBorderWidth:1
+    }));
+  }
+  dk.setProps({layers:layers.filter(Boolean)});
+  renderLegend();
+}
+
+// ---- gauge ----
+const GNS="http://www.w3.org/2000/svg";
+function gaugeInit(){
+  const svg=document.getElementById("gauge");
+  const arc=(r,a0,a1)=>{const p=a=>[125+r*Math.cos(a),128-r*Math.sin(a)];
+    const [x0,y0]=p(a0),[x1,y1]=p(a1);
+    return `M${x0} ${y0} A${r} ${r} 0 ${Math.abs(a1-a0)>Math.PI?1:0} 1 ${x1} ${y1}`;};
+  const mk=(tag,at)=>{const e=document.createElementNS(GNS,tag);
+    for(const k in at)e.setAttribute(k,at[k]);svg.appendChild(e);return e;};
+  const grad=mk("linearGradient",{id:"gg",x1:0,y1:0,x2:1,y2:0});
+  [["0%","#8b949e"],["50%","#c98500"],["100%","#ffc24d"]].forEach(([o,c])=>{
+    const s=document.createElementNS(GNS,"stop");
+    s.setAttribute("offset",o);s.setAttribute("stop-color",c);grad.appendChild(s);});
+  mk("path",{d:arc(96,Math.PI,0),stroke:"#242b35","stroke-width":13,fill:"none","stroke-linecap":"round"});
+  gaugeInit.fg=mk("path",{d:arc(96,Math.PI,Math.PI),stroke:"url(#gg)","stroke-width":13,
+    fill:"none","stroke-linecap":"round"});
+  for(const v of [0,25,50,75,100]){
+    const a=Math.PI*(1-v/100), x=125+112*Math.cos(a), y=128-112*Math.sin(a);
+    mk("text",{x,y:y+3,"text-anchor":"middle",class:"gaugeCap"}).textContent=v;
+  }
+  gaugeInit.needle=mk("line",{x1:125,y1:128,x2:125,y2:46,stroke:"#e6edf3","stroke-width":2.5,
+    "stroke-linecap":"round"});
+  mk("circle",{cx:125,cy:128,r:5,fill:"#e6edf3"});
+  gaugeInit.num=mk("text",{x:125,y:112,"text-anchor":"middle",class:"gaugeNum"});
+  gaugeInit.arc=arc;
+}
+function gaugeSet(v){
+  const a=Math.PI*(1-v/100);
+  gaugeInit.fg.setAttribute("d",v<1?gaugeInit.arc(96,Math.PI,Math.PI):gaugeInit.arc(96,Math.PI,a));
+  gaugeInit.needle.setAttribute("x2",125+82*Math.cos(a));
+  gaugeInit.needle.setAttribute("y2",128-82*Math.sin(a));
+  gaugeInit.num.textContent=v;
+  const s=document.getElementById("strategy");
+  s.innerHTML = v<35
+    ? "<b>Persuasion play.</b> A moderate platform peaks in swing tracts (~50/50 lean): outer NoVA, Henrico, Chesterfield, Virginia Beach suburbs."
+    : v<=65
+    ? "<b>Balanced play.</b> Center-right platform draws from lean-R suburbs and exurbs; both persuasion and turnout contribute."
+    : "<b>Base mobilization.</b> A hard-conservative platform peaks in deep-red rural tracts: Southwest, Southside, Shenandoah Valley. Swing suburbs fade.";
+}
+gaugeInit();
+
+// ---- legend / stats ----
+function renderLegend(){
+  const el=document.getElementById("legend");
+  const g = mode==="resp"
+    ? `linear-gradient(90deg,${AMBER.join(",")})`
+    : `linear-gradient(90deg,${DIVERGE.join(",")})`;
+  el.innerHTML = mode==="resp"
+    ? `Color = responsivity to a platform at <b style="color:#ffc24d">${cIdx}</b>
+       <div class="grad" style="background:${g}"></div>
+       <div class="gl"><span>0</span><span>40</span><span>80</span></div>`
+    : `Color = model partisan lean (post-stratified P of two-party vote)
+       <div class="grad" style="background:${g}"></div>
+       <div class="gl"><span style="color:#67a9cf">Democratic</span><span style="color:#ef8a62">Republican</span></div>`;
+}
+function renderRouteStats(hq){
+  const rs=document.getElementById("routeStats"), tt=document.getElementById("totals");
+  if(!routes||!routes.length){rs.innerHTML="";tt.innerHTML="";return;}
+  const maxRec=Math.max(...routes.map(r=>r.receptive));
+  rs.innerHTML=routes.map(r=>`
+    <div class="route">
+      <div class="top"><span class="chip" style="background:${WCOL[r.walker]}">${r.walker+1}</span>
+        <span>${r.stops.length} tracts</span><span class="mi">${r.miles.toFixed(1)} mi</span></div>
+      <div class="bar"><i style="width:${(100*r.receptive/maxRec).toFixed(1)}%;background:${WCOL[r.walker]}"></i></div>
+      <div class="nums"><span><b>${Math.round(r.receptive).toLocaleString()}</b> receptive</span>
+        <span><b>${r.doors.toLocaleString()}</b> doors</span></div>
+    </div>`).join("");
+  const rec=routes.reduce((s,r)=>s+r.receptive,0), dr=routes.reduce((s,r)=>s+r.doors,0),
+        mi=routes.reduce((s,r)=>s+r.miles,0);
+  tt.innerHTML=`
+    <div class="tile"><div class="v" style="color:var(--accent2)">${Math.round(rec).toLocaleString()}</div>
+      <div class="k">expected receptive doors</div></div>
+    <div class="tile"><div class="v">${dr.toLocaleString()}</div><div class="k">total doors</div></div>
+    <div class="tile"><div class="v">${mi.toFixed(0)} mi</div><div class="k">route distance</div></div>
+    <div class="tile"><div class="v">${(100*rec/Math.max(1,dr)).toFixed(0)}%</div><div class="k">hit rate</div></div>`;
+}
+
+// ---- canvass feedback loop ----
+let logMode=false, fbSel=null;
+function persistObs(){ try{localStorage.setItem("va_canvass_v1",JSON.stringify(obs));}catch(e){} }
+function afterObsChange(){
+  obsVer++; persistObs(); rescore(); renderFeedback(); draw();
+  if(hasRoutes) optimize();
+}
+function renderFeedback(){
+  const el=document.getElementById("fbStats");
+  const ids=Object.keys(obs);
+  if(!ids.length){el.innerHTML="";return;}
+  let n=0,k=0,pred=0;
+  const idx=new Map(T.map((t,i)=>[t.id,i]));
+  for(const id of ids){
+    const o=obs[id], i=idx.get(id);
+    if(i===undefined) continue;
+    n+=o.n; k+=o.k; pred+=prior[i]*o.n;
+  }
+  const moved=ids.filter(id=>{const i=idx.get(id);
+    return i!==undefined&&Math.abs(resp[i]-prior[i])>0.05;}).length;
+  el.innerHTML=`<div class="tiles">
+    <div class="tile"><div class="v">${n.toLocaleString()}</div><div class="k">doors logged</div></div>
+    <div class="tile"><div class="v">${ids.length}</div><div class="k">tracts canvassed</div></div>
+    <div class="tile"><div class="v" style="color:#199e70">${n?(100*k/n).toFixed(0):0}%</div>
+      <div class="k">observed receptive</div></div>
+    <div class="tile"><div class="v">${n?(100*pred/n).toFixed(0):0}%</div>
+      <div class="k">model predicted</div></div></div>
+    <div class="note">${moved} tract score${moved===1?"":"s"} shifted &gt;5 pts by field data.
+    Green-outlined tracts carry calibrated posteriors.</div>`;
+}
+document.getElementById("logBtn").onclick=()=>{
+  logMode=!logMode;
+  const b=document.getElementById("logBtn");
+  b.classList.toggle("on",logMode);
+  b.textContent=logMode?"Log mode: ON - click tracts to log doors":"Log mode: off - click tracts to log doors";
+  if(!logMode){document.getElementById("fbForm").style.display="none";fbSel=null;}
+};
+document.getElementById("fbSave").onclick=()=>{
+  if(fbSel===null) return;
+  const n=Math.max(1,+document.getElementById("fbN").value||1);
+  const kIn=Math.max(0,Math.min(n,+document.getElementById("fbK").value||0));
+  const id=T[fbSel].id, o=obs[id]||{n:0,k:0};
+  obs[id]={n:o.n+n, k:o.k+kIn};
+  document.getElementById("fbForm").style.display="none"; fbSel=null;
+  afterObsChange();
+};
+// demo helper: fake one shift of results on the current routes (labeled simulation,
+// so the loop can be seen without typing; real use = per-tract manual logging)
+document.getElementById("simBtn").onclick=()=>{
+  if(!hasRoutes){optimize(); if(!hasRoutes) return;}
+  for(const r of routes)
+    for(const i of r.stops){
+      const doors=Math.min(T[i].hh, 30+Math.floor(Math.random()*50));
+      const rate=Math.max(0,Math.min(1, prior[i]+(Math.random()-0.5)*0.25));
+      let hits=0; for(let d=0;d<doors;d++) if(Math.random()<rate) hits++;
+      const id=T[i].id, o=obs[id]||{n:0,k:0};
+      obs[id]={n:o.n+doors,k:o.k+hits};
+    }
+  afterObsChange();
+};
+document.getElementById("expBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),
+    platform_index:cIdx, results:obs},null,1)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="va_canvass_results.json"; a.click();
+  URL.revokeObjectURL(a.href);
+};
+document.getElementById("impBtn").onclick=()=>document.getElementById("impFile").click();
+document.getElementById("impFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.text().then(txt=>{
+    try{
+      const d=JSON.parse(txt), src=d.results||d;
+      for(const id in src){
+        const o=src[id];
+        if(o&&Number.isFinite(o.n)&&Number.isFinite(o.k)&&o.n>0&&o.k>=0&&o.k<=o.n){
+          const cur=obs[id]||{n:0,k:0};
+          obs[id]={n:cur.n+o.n,k:cur.k+o.k};
+        }
+      }
+      afterObsChange();
+    }catch(err){}
+    e.target.value="";
+  });
+});
+document.getElementById("rstBtn").onclick=()=>{obs={};afterObsChange();};
+
+// ---- wiring ----
+let debounce=null;
+document.getElementById("cIdx").addEventListener("input",e=>{
+  cIdx=+e.target.value; gaugeSet(cIdx); rescore(); draw();
+  if(hasRoutes){clearTimeout(debounce); debounce=setTimeout(optimize,350);}
+});
+document.getElementById("wk").addEventListener("input",e=>{
+  document.getElementById("wkV").textContent=e.target.value;});
+document.getElementById("bu").addEventListener("input",e=>{
+  document.getElementById("buV").textContent=e.target.value+" mi";});
+document.getElementById("mResp").onclick=()=>{mode="resp";setMode();};
+document.getElementById("mLean").onclick=()=>{mode="lean";setMode();};
+function setMode(){
+  document.getElementById("mResp").classList.toggle("on",mode==="resp");
+  document.getElementById("mLean").classList.toggle("on",mode==="lean");
+  draw();
+}
+document.getElementById("optBtn").onclick=optimize;
+document.getElementById("clrBtn").onclick=()=>{routes=null;hasRoutes=false;renderRouteStats();draw();};
+
+gaugeSet(cIdx);
+renderFeedback();
+draw();
+</script>
+</body>
+</html>

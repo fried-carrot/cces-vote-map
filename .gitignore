@@ -9,3 +9,7 @@ __pycache__/
 
 # intermediate geojson (districts.js is the deployed artifact)
 districts.json
+
+# browser-automation artifacts and local screenshots
+.playwright-mcp/
+live-pages.jpeg
